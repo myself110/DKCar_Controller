@@ -486,7 +486,7 @@ InputManager:
     axis: 5
     joyNum: 0
   - serializedVersion: 3
-    m_Name: RX
+    m_Name: MozaRX
     descriptiveName: 
     descriptiveNegativeName: 
     negativeButton: 
@@ -499,10 +499,10 @@ InputManager:
     snap: 0
     invert: 0
     type: 2
-    axis: 0
+    axis: 4
     joyNum: 0
   - serializedVersion: 3
-    m_Name: RY
+    m_Name: MozaRY
     descriptiveName: 
     descriptiveNegativeName: 
     negativeButton: 
@@ -515,6 +515,6 @@ InputManager:
     snap: 0
     invert: 0
     type: 2
-    axis: 1
+    axis: 5
     joyNum: 0
   m_UsePhysicalKeys: 1

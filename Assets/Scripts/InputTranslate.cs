@@ -66,7 +66,7 @@ public class InputTranslate : MonoBehaviour
             UpdateThrottleVisuals();
             if (throttleValueText)
             {
-                throttleValueText.text = $"Throttle: {throttleValue:F2}";
+                throttleValueText.text = $"PS5 Throttle: {throttleValue:F2}";
             }
             previousThrottleValue = throttleValue;
         }
@@ -77,7 +77,7 @@ public class InputTranslate : MonoBehaviour
             UpdateSteerVisuals();
             if (steerValueText)
             {
-                steerValueText.text = $"Steer: {steerValue:F2}";
+                steerValueText.text = $"PS5 Steer: {steerValue:F2}";
             }
             previousSteerValue = steerValue;
         }
