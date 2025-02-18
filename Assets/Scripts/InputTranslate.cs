@@ -21,8 +21,8 @@ public class InputTranslate : MonoBehaviour
     [SerializeField] private float maxSteerDistance = 4f;     // Maximum vertical distance the steering cube can move
 
     // Cached input values
-    private float throttleValue;  // Combined L2/R2 value: L2 = negative, R2 = positive (-1 to 1)
-    private float steerValue;     // Left stick horizontal value: left = negative, right = positive (-1 to 1)
+    public float throttleValue { get; private set; }  // Combined L2/R2 value: L2 = negative, R2 = positive (-1 to 1)
+    public float steerValue { get; private set; }     // Left stick horizontal value: left = negative, right = positive (-1 to 1)
     private float previousThrottleValue;
     private float previousSteerValue;
 

@@ -1,78 +1,98 @@
 using UnityEngine;
 using NativeWebSocket;
-using Newtonsoft.Json;
-using System.Collections;
 using System.Threading.Tasks;
 
 public class DonkeyCarWebSocket : MonoBehaviour
 {
-    public string donkeyCarIP = "192.168.1.100"; // Replace with your Donkey Car's IP
-    public int donkeyCarPort = 9091; // Default WebSocket port
-    WebSocket websocket;
+    [Header("WebSocket Settings")]
+    public string donkeyCarIP = "192.168.1.100";
+    public int donkeyCarPort = 8887;
+    
+    [Header("Control Values")]
+    [SerializeField] private float throttle = 0f;
+    [SerializeField] private float angle = 0f;
+    [SerializeField] private float stepSize = 0.1f;
+    private string mode = "user";
+    private bool recording = false;
 
-    public float steering;
-    public float throttle;
+    private WebSocket websocket;
+    private bool isConnected;
 
     async void Start()
     {
-        websocket = new WebSocket($"ws://{donkeyCarIP}:{donkeyCarPort}");
+        websocket = new WebSocket($"ws://{donkeyCarIP}:{donkeyCarPort}/wsDrive");
 
         websocket.OnOpen += () =>
         {
             Debug.Log("Connection open!");
+            isConnected = true;
         };
 
         websocket.OnError += (e) =>
         {
-            Debug.LogError("Error! " + e);
+            Debug.LogError($"Error! {e}");
+            isConnected = false;
         };
 
         websocket.OnClose += (e) =>
         {
             Debug.Log("Connection closed!");
+            isConnected = false;
         };
 
-        websocket.OnMessage += (bytes) =>
-        {
-            // Receiving messages (optional for a controller)
-            Debug.Log("OnMessage! " + System.Text.Encoding.UTF8.GetString(bytes));
-        };
-
-        // Connect and await the connection
         await websocket.Connect();
     }
 
-    async Task SendControlData()
+    void Update()
     {
-        // Create a JSON object
-        var controlData = new {
-            msg_type = "control", // Or whatever msg_type the Donkeycar expects
-            steering = steering,
-            throttle = throttle
-        };
-        string jsonData = JsonConvert.SerializeObject(controlData);
+        #if !UNITY_WEBGL || UNITY_EDITOR
+            websocket?.DispatchMessageQueue();
+        #endif
 
-        // Send the message
-        if (websocket.State == WebSocketState.Open)
+        if (!isConnected) return;
+
+        // Handle keyboard input
+        if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            await websocket.SendText(jsonData);
+            throttle += stepSize;
+            SendControlData();
+            Debug.Log($"Throttle: {throttle}");
+        }
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            throttle -= stepSize;
+            SendControlData();
+            Debug.Log($"Throttle: {throttle}");
+        }
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            angle -= stepSize;
+            SendControlData();
+            Debug.Log($"Angle: {angle}");
+        }
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            angle += stepSize;
+            SendControlData();
+            Debug.Log($"Angle: {angle}");
         }
     }
 
-    async void Update()
+    async void SendControlData()
     {
-        #if !UNITY_WEBGL || UNITY_EDITOR
-            if (websocket != null)
-            {
-                websocket.DispatchMessageQueue();
-            }
-        #endif
+        if (websocket.State != WebSocketState.Open) return;
 
-        // Get input from your controller (already mapped to -1.0 to 1.0)
-        steering = Input.GetAxis("Horizontal"); // Example: A/D keys
-        throttle = Input.GetAxis("Vertical");   // Example: W/S keys
+        var controlData = new
+        {
+            angle = angle,
+            throttle = throttle,
+            drive_mode = mode,
+            recording = recording
+        };
 
-        await SendControlData();
+        string jsonData = JsonUtility.ToJson(controlData);
+        Debug.Log($"Sending JSON: {jsonData}");
+        await websocket.SendText(jsonData);
     }
 
     private async void OnApplicationQuit()

@@ -23,8 +23,8 @@ public class MozaInputTranslate : MonoBehaviour
     private InputAction mozaSteerRight;
     private Vector3 throttleInitialPos;
     private Vector3 steerInitialPos;
-    private float throttleValue;
-    private float steerValue;
+    public float throttleValue { get; private set; }
+    public float steerValue { get; private set; }
 
     void Awake()
     {
