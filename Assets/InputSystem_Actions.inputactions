@@ -604,6 +604,54 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "G27",
+            "id": "32e0c712-43d8-4f3b-b897-12a271f29341",
+            "actions": [
+                {
+                    "name": "G27Steer",
+                    "type": "Value",
+                    "id": "5f645a18-181f-480b-9b00-744e3c45ff09",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "G27Throttle",
+                    "type": "Value",
+                    "id": "99b92ea6-2418-437d-8009-830bcc5d8575",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "d4c10cd1-86b7-4714-bf9e-76333f83a715",
+                    "path": "<HID::G27 Racing Wheel>/stick/x",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "G27Steer",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1919913a-92b4-4650-b25d-73f1e9ad243c",
+                    "path": "<HID::G27 Racing Wheel>/stick/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "G27Throttle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": [

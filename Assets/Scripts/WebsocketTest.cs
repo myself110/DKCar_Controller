@@ -1,6 +1,7 @@
 using UnityEngine;
 using WebSocketSharp;
 using UnityEngine.InputSystem;
+using TMPro;
 
 [System.Serializable]
 public class DonkeyCarData
@@ -13,10 +14,26 @@ public class DonkeyCarData
 
 public class WebsocketTest : MonoBehaviour
 {
+    [Header("Connection Settings")]
+    [SerializeField] private string ipAddress = "192.168.1.223";
+    [SerializeField] private string port = "8887";
+    [SerializeField] private float reconnectDelay = 5f;
+    [SerializeField] private int maxReconnectAttempts = 3;
+    private int reconnectAttempts = 0;
+    private bool isReconnecting = false;
+
+    [Header("Controller Enable/Disable")]
+    [SerializeField] private bool enableKeyboardInput = true;
+    [SerializeField] private bool enableMozaInput = false;
+    [SerializeField] private bool enableG27Input = true;
+
     [Header("Input Settings")]
     [SerializeField] private float stepSize = 0.1f;
     [SerializeField] private float inputDeadzone = 0.01f;
     [SerializeField] private InputActionAsset inputActions;
+    
+    [Header("UI References")]
+    [SerializeField] private TextMeshProUGUI connectionStatusText;
     
     private WebSocket ws;
     private float angle = 0f;
@@ -31,13 +48,18 @@ public class WebsocketTest : MonoBehaviour
     private InputAction mozaSteerLeft;
     private InputAction mozaSteerRight;
 
+    // G27 Input Actions
+    private InputActionMap g27Map;
+    private InputAction g27Throttle;
+    private InputAction g27Steer;
+
     void Start()
     {
-        InitializeMozaInputs();
+        InitializeInputs();
         InitializeWebSocket();
     }
 
-    private void InitializeMozaInputs()
+    private void InitializeInputs()
     {
         if (inputActions == null)
         {
@@ -57,23 +79,120 @@ public class WebsocketTest : MonoBehaviour
         mozaSteerLeft = mozaMap.FindAction("MozaSteerLeft");
         mozaSteerRight = mozaMap.FindAction("MozaSteerRight");
         
+        // Initialize G27 inputs
+        g27Map = inputActions.FindActionMap("G27", true);
+        if (g27Map == null)
+        {
+            Debug.LogError("Could not find 'G27' action map!");
+            return;
+        }
+
+        g27Throttle = g27Map.FindAction("G27Throttle");
+        g27Steer = g27Map.FindAction("G27Steer");
+        
         mozaMap.Enable();
+        g27Map.Enable();
     }
 
     private void InitializeWebSocket()
     {
-        ws = new WebSocket("ws://192.168.50.142:8887/wsDrive");
-        ws.OnOpen += (sender, e) => Debug.Log("WebSocket connected!");
+        string wsUrl = $"ws://{ipAddress}:{port}/wsDrive";
+        ws = new WebSocket(wsUrl);
+        
+        UpdateConnectionStatus(false); // Initial state
+        
+        ws.OnOpen += (sender, e) => {
+            Debug.Log("WebSocket connected!");
+            isReconnecting = false;
+            reconnectAttempts = 0;
+            ResetControlValues();
+            SendControlSignal();
+            UpdateConnectionStatus(true);
+        };
+        
         ws.OnMessage += (sender, e) => Debug.Log("Message received: " + e.Data);
-        ws.OnError += (sender, e) => Debug.LogError("WebSocket error: " + e.Message);
-        ws.OnClose += (sender, e) => Debug.Log("WebSocket closed: " + e.Reason);
-        ws.Connect();
+        
+        ws.OnError += (sender, e) => {
+            Debug.LogWarning($"WebSocket error: {e.Message}");
+            if (connectionStatusText != null)
+            {
+                connectionStatusText.text = "Status: Disconnected";
+                connectionStatusText.color = Color.red;
+            }
+            ws?.Close();
+            ws = null;
+        };
+        
+        ws.OnClose += (sender, e) => {
+            Debug.Log("WebSocket closed: " + e.Reason);
+            if (connectionStatusText != null)
+            {
+                connectionStatusText.text = "Status: Disconnected";
+                connectionStatusText.color = Color.red;
+            }
+            ws = null;
+        };
+        
+        TryConnect();
+    }
+
+    private void TryConnect()
+    {
+        try
+        {
+            ws.Connect();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to connect: {e.Message}");
+            AttemptReconnect();
+        }
+    }
+
+    private async void AttemptReconnect()
+    {
+        if (isReconnecting || reconnectAttempts >= maxReconnectAttempts) return;
+
+        isReconnecting = true;
+        reconnectAttempts++;
+        
+        Debug.Log($"Attempting to reconnect... Attempt {reconnectAttempts}/{maxReconnectAttempts}");
+        
+        await System.Threading.Tasks.Task.Delay((int)(reconnectDelay * 1000));
+        
+        if (ws != null)
+        {
+            ws.Close();
+            ws = null;
+        }
+        
+        InitializeWebSocket();
+    }
+
+    private void ResetControlValues()
+    {
+        angle = 0f;
+        throttle = 0f;
+        mode = "user";
+        recording = false;
+        
+        // Also disable input maps initially and re-enable only the ones we want
+        mozaMap?.Disable();
+        g27Map?.Disable();
+        
+        if (enableMozaInput) mozaMap?.Enable();
+        if (enableG27Input) g27Map?.Enable();
     }
 
     void Update()
     {
-        HandleKeyboardInput();
-        HandleMozaInput();
+        // Reset values at the start of each frame
+        angle = 0f;
+        throttle = 0f;
+
+        if (enableKeyboardInput) HandleKeyboardInput();
+        if (enableMozaInput) HandleMozaInput();
+        if (enableG27Input) HandleG27Input();
     }
 
     void HandleMozaInput()
@@ -111,6 +230,24 @@ public class WebsocketTest : MonoBehaviour
 
         if (Mathf.Abs(throttle) > inputDeadzone || Mathf.Abs(angle) > inputDeadzone)
         {
+            SendControlSignal();
+        }
+    }
+
+    void HandleG27Input()
+    {
+        if (g27Throttle == null || g27Steer == null) return;
+
+        float throttleRaw = g27Throttle.ReadValue<float>();
+        float steerRaw = g27Steer.ReadValue<float>();
+
+        if (Mathf.Abs(throttleRaw) < inputDeadzone) throttleRaw = 0f;
+        if (Mathf.Abs(steerRaw) < inputDeadzone) steerRaw = 0f;
+
+        if (Mathf.Abs(throttleRaw) > inputDeadzone || Mathf.Abs(steerRaw) > inputDeadzone)
+        {
+            throttle = throttleRaw;
+            angle = steerRaw;
             SendControlSignal();
         }
     }
@@ -157,14 +294,51 @@ public class WebsocketTest : MonoBehaviour
         };
 
         string json = JsonUtility.ToJson(data);
-        Debug.Log($"Sending JSON - Throttle: {throttle:F2}, Angle: {angle:F2}");
-        Debug.Log($"JSON: {json}");
+        Debug.Log($"Sending Control Signal - Throttle: {throttle:F2}, Angle: {angle:F2}, Valid Controllers: G27={g27Map != null}, MOZA={mozaMap != null}");
         ws.Send(json);
     }
 
     void OnDestroy()
     {
+        if (ws != null)
+        {
+            isReconnecting = false;
+            ws.Close();
+        }
         mozaMap?.Disable();
-        ws?.Close();
+        g27Map?.Disable();
+    }
+
+    public void RetryConnection()
+    {
+        // Reset connection state
+        isReconnecting = false;
+        reconnectAttempts = 0;
+        
+        // Update status to show reconnecting
+        if (connectionStatusText != null)
+        {
+            connectionStatusText.text = "Status: Reconnecting...";
+            connectionStatusText.color = Color.yellow;
+        }
+        
+        // Close existing connection if any
+        if (ws != null)
+        {
+            ws.Close();
+            ws = null;
+        }
+        
+        Debug.Log("Manually retrying connection...");
+        InitializeWebSocket();
+    }
+
+    private void UpdateConnectionStatus(bool isConnected)
+    {
+        if (connectionStatusText != null)
+        {
+            connectionStatusText.text = $"Status: {(isConnected ? "Connected" : "Disconnected")}";
+            connectionStatusText.color = isConnected ? Color.green : Color.red;
+        }
     }
 }

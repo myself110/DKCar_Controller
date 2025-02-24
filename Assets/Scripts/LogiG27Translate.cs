@@ -15,13 +15,48 @@ public class LogiG27Translate : MonoBehaviour
     [SerializeField] private float maxThrottleDistance = 4f;
     [SerializeField] private float maxSteerDistance = 4f;
     [SerializeField] private float inputDeadzone = 0.01f;
+    [SerializeField] private InputActionAsset inputActions;
 
+    private InputActionMap g27Map;
+    private InputAction g27Throttle;
+    private InputAction g27Steer;
     private Vector3 throttleInitialPos;
     private Vector3 steerInitialPos;
     public float throttleValue { get; private set; }
     public float steerValue { get; private set; }
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Awake()
+    {
+        if (inputActions == null)
+        {
+            Debug.LogError("Input Actions asset is not assigned!");
+            return;
+        }
+
+        g27Map = inputActions.FindActionMap("G27", true);
+        if (g27Map == null)
+        {
+            Debug.LogError("Could not find 'G27' action map!");
+            return;
+        }
+
+        g27Throttle = g27Map.FindAction("G27Throttle");
+        g27Steer = g27Map.FindAction("G27Steer");
+        
+        if (g27Throttle == null) Debug.LogError("Could not find 'G27Throttle' action!");
+        if (g27Steer == null) Debug.LogError("Could not find 'G27Steer' action!");
+    }
+
+    void OnEnable()
+    {
+        g27Map?.Enable();
+    }
+
+    void OnDisable()
+    {
+        g27Map?.Disable();
+    }
+
     void Start()
     {
         if (throttleCube) throttleInitialPos = throttleCube.transform.position;
@@ -29,9 +64,10 @@ public class LogiG27Translate : MonoBehaviour
         if (controllerTypeText) controllerTypeText.text = "Active Controller: G27";
     }
 
-    // Update is called once per frame
     void Update()
     {
+        if (g27Throttle == null || g27Steer == null) return;
+
         ProcessThrottleInputs();
         ProcessSteerInputs();
         UpdateVisuals();
@@ -39,33 +75,22 @@ public class LogiG27Translate : MonoBehaviour
 
     private void ProcessThrottleInputs()
     {
-        // G27 pedals are typically on axes 3 (accelerator) and 2 (brake)
-        // Accelerator: 1 to -1 (released to pressed)
-        // Brake: -1 to 1 (released to pressed)
-        float accelerator = Input.GetAxis("G27 Accelerator");
-        float brake = Input.GetAxis("G27 Brake");
-
-        // Invert and remap accelerator from (-1 to 1) to (0 to 1)
-        float acceleratorMapped = Mathf.InverseLerp(-1f, 1f, -accelerator);
-
-        // Remap brake from (-1 to 1) to (0 to -1)
-        float brakeMapped = -Mathf.InverseLerp(-1f, 1f, brake);
-
+        float throttleRaw = g27Throttle.ReadValue<float>();
+        
         // Apply deadzone
-        if (Mathf.Abs(acceleratorMapped) < inputDeadzone) acceleratorMapped = 0f;
-        if (Mathf.Abs(brakeMapped) < inputDeadzone) brakeMapped = 0f;
-
-        // Use whichever input has larger absolute value
-        throttleValue = Mathf.Abs(acceleratorMapped) > Mathf.Abs(brakeMapped) 
-            ? acceleratorMapped 
-            : brakeMapped;
+        if (Mathf.Abs(throttleRaw) < inputDeadzone)
+        {
+            throttleValue = 0f;
+        }
+        else
+        {
+            throttleValue = throttleRaw;
+        }
     }
 
     private void ProcessSteerInputs()
     {
-        // G27 steering is typically on axis 1
-        // Raw value is -1 (left) to 1 (right)
-        float steerRaw = Input.GetAxis("G27 Steering");
+        float steerRaw = g27Steer.ReadValue<float>();
 
         // Apply deadzone
         if (Mathf.Abs(steerRaw) < inputDeadzone)
