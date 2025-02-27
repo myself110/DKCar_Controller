@@ -53,6 +53,8 @@ public class WebsocketTest : MonoBehaviour
     private InputAction g27Throttle;
     private InputAction g27Steer;
 
+    private float mappedThrottle;
+
     void Start()
     {
         InitializeInputs();
@@ -238,16 +240,19 @@ public class WebsocketTest : MonoBehaviour
     {
         if (g27Throttle == null || g27Steer == null) return;
 
-        float throttleRaw = g27Throttle.ReadValue<float>();
+        float throttleRaw = g27Throttle.ReadValue<float>();  // Raw value from -1 to +1
         float steerRaw = g27Steer.ReadValue<float>();
+
+        // Map throttle from -1,+1 to +1,0 (reversed InverseLerp)
+        mappedThrottle = 1f - Mathf.InverseLerp(-1f, 1f, throttleRaw);
 
         if (Mathf.Abs(throttleRaw) < inputDeadzone) throttleRaw = 0f;
         if (Mathf.Abs(steerRaw) < inputDeadzone) steerRaw = 0f;
 
         if (Mathf.Abs(throttleRaw) > inputDeadzone || Mathf.Abs(steerRaw) > inputDeadzone)
         {
-            throttle = throttleRaw;
-            angle = steerRaw;
+            throttle = mappedThrottle;  // Use mapped throttle value
+            angle = steerRaw;           // Keep raw steer value
             SendControlSignal();
         }
     }

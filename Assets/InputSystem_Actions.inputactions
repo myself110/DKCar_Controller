@@ -626,6 +626,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "G27Reverse",
+                    "type": "Value",
+                    "id": "a876d75e-0b87-46a7-ad4d-0ae96a488231",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -648,6 +657,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "G27Throttle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f89dc0ef-55a9-4174-a6d8-df2e421dbd02",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "G27Reverse",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
