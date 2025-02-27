@@ -643,7 +643,7 @@
                 {
                     "name": "",
                     "id": "1919913a-92b4-4650-b25d-73f1e9ad243c",
-                    "path": "<HID::G27 Racing Wheel>/stick/y",
+                    "path": "<HID::G27 Racing Wheel>/z",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
