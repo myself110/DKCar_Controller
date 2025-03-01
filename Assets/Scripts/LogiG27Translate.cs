@@ -20,6 +20,7 @@ public class LogiG27Translate : MonoBehaviour
     private InputActionMap g27Map;
     private InputAction g27Throttle;
     private InputAction g27Steer;
+    private InputAction g27Reverse;
     private Vector3 throttleInitialPos;
     private Vector3 steerInitialPos;
     public float throttleValue { get; private set; }
@@ -42,9 +43,11 @@ public class LogiG27Translate : MonoBehaviour
 
         g27Throttle = g27Map.FindAction("G27Throttle");
         g27Steer = g27Map.FindAction("G27Steer");
+        g27Reverse = g27Map.FindAction("G27Reverse");
         
         if (g27Throttle == null) Debug.LogError("Could not find 'G27Throttle' action!");
         if (g27Steer == null) Debug.LogError("Could not find 'G27Steer' action!");
+        if (g27Reverse == null) Debug.LogError("Could not find 'G27Reverse' action!");
     }
 
     void OnEnable()
@@ -66,7 +69,7 @@ public class LogiG27Translate : MonoBehaviour
 
     void Update()
     {
-        if (g27Throttle == null || g27Steer == null) return;
+        if (g27Throttle == null || g27Steer == null || g27Reverse == null) return;
 
         ProcessThrottleInputs();
         ProcessSteerInputs();
@@ -76,15 +79,33 @@ public class LogiG27Translate : MonoBehaviour
     private void ProcessThrottleInputs()
     {
         float throttleRaw = g27Throttle.ReadValue<float>();
+        float reverseRaw = g27Reverse.ReadValue<float>();
         
-        // Apply deadzone
-        if (Mathf.Abs(throttleRaw) < inputDeadzone)
+        // Calculate throttle value
+        float mappedThrottle = 0f;
+        if (Mathf.Abs(throttleRaw) >= inputDeadzone)
         {
-            throttleValue = 0f;
+            // Map throttle from +1..-1 to 0..1
+            mappedThrottle = (-throttleRaw + 1f) * 0.5f;
+        }
+        
+        // Calculate reverse value
+        float mappedReverse = 0f;
+        if (Mathf.Abs(reverseRaw) >= inputDeadzone)
+        {
+            // Map reverse from +1..-1 to 0..-1
+            //mappedReverse = -reverseRaw * 0.5f;
+            mappedReverse = (reverseRaw - 1f) * 0.5f; 
+        }
+
+        // Prioritize throttle over reverse
+        if (mappedThrottle > 0f)
+        {
+            throttleValue = mappedThrottle;
         }
         else
         {
-            throttleValue = throttleRaw;
+            throttleValue = mappedReverse;
         }
     }
 

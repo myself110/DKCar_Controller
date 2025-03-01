@@ -626,6 +626,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "G27Reverse",
+                    "type": "Value",
+                    "id": "c2a49b9f-bd56-4b3d-9510-acc4c8bdac67",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -648,6 +657,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "G27Throttle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "3d1bd8ae-852a-4d91-8c0d-543dc7e62e69",
+                    "path": "<HID::G27 Racing Wheel>/rz",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "G27Reverse",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

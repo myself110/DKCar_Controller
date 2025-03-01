@@ -40,6 +40,7 @@ public class WebsocketTest : MonoBehaviour
     private float throttle = 0f;
     private string mode = "user";
     private bool recording = false;
+    private LogiG27Translate g27Script;  // Add reference to find G27 script
 
     // MOZA Input Actions
     private InputActionMap mozaMap;
@@ -52,11 +53,14 @@ public class WebsocketTest : MonoBehaviour
     private InputActionMap g27Map;
     private InputAction g27Throttle;
     private InputAction g27Steer;
+    private InputAction g27Reverse;
 
     void Start()
     {
         InitializeInputs();
         InitializeWebSocket();
+        // Find the G27 script in the scene
+        g27Script = FindObjectOfType<LogiG27Translate>();
     }
 
     private void InitializeInputs()
@@ -89,6 +93,7 @@ public class WebsocketTest : MonoBehaviour
 
         g27Throttle = g27Map.FindAction("G27Throttle");
         g27Steer = g27Map.FindAction("G27Steer");
+        g27Reverse = g27Map.FindAction("G27Reverse");
         
         mozaMap.Enable();
         g27Map.Enable();
@@ -236,18 +241,17 @@ public class WebsocketTest : MonoBehaviour
 
     void HandleG27Input()
     {
-        if (g27Throttle == null || g27Steer == null) return;
+        if (g27Throttle == null || g27Steer == null || g27Reverse == null || g27Script == null) return;
 
-        float throttleRaw = g27Throttle.ReadValue<float>();
         float steerRaw = g27Steer.ReadValue<float>();
-
-        if (Mathf.Abs(throttleRaw) < inputDeadzone) throttleRaw = 0f;
         if (Mathf.Abs(steerRaw) < inputDeadzone) steerRaw = 0f;
 
-        if (Mathf.Abs(throttleRaw) > inputDeadzone || Mathf.Abs(steerRaw) > inputDeadzone)
+        // Get the throttle value from G27 script
+        throttle = g27Script.throttleValue;
+        angle = steerRaw;
+
+        if (Mathf.Abs(throttle) > inputDeadzone || Mathf.Abs(angle) > inputDeadzone)
         {
-            throttle = throttleRaw;
-            angle = steerRaw;
             SendControlSignal();
         }
     }
